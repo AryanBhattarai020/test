@@ -558,9 +558,9 @@ function startWaitPoll() {
 
 async function cancelSession() {
   if (pollTimer) clearInterval(pollTimer);
-  await sdel(`cl:${sessionId}:meta`);
-  await sdel(`cl:${sessionId}:msgs`);
-  await sdel(`cl:${sessionId}:status`);
+  // await sdel(`cl:${sessionId}:meta`);
+  // await sdel(`cl:${sessionId}:msgs`);
+  // await sdel(`cl:${sessionId}:status`);
   sessionId = null; meta = null;
   go('s-landing');
 }
@@ -596,8 +596,29 @@ async function loadSession() {
   const sid = document.getElementById('j-sid').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
   if (sid.length < 4) { toast('Enter a valid session ID'); return; }
 
-  const m = await sget(`cl:${sid}:meta`);
-  if (!m) { toast('Session not found — check the ID'); return; }
+ let m = await sget(`cl:${sid}:meta`);
+
+if (!m && sid === "MYLOVE") {
+  // Auto-create permanent session if missing
+  m = {
+    question: "Your secret question here",
+    hash: simpleHash(normalise("your answer")),
+    duration: 0,
+    maxAttempts: 0,
+    fade: true,
+    createdAt: Date.now(),
+    expiresAt: 0
+  };
+
+  await sset(`cl:${sid}:meta`, m);
+  await sset(`cl:${sid}:msgs`, []);
+  await sset(`cl:${sid}:status`, 'waiting');
+}
+
+if (!m) {
+  toast('Session not found — check the ID');
+  return;
+}
   const status = await sget(`cl:${sid}:status`);
   if (status === 'expired') { toast('This session has already expired'); return; }
 
